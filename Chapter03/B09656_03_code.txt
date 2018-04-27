@@ -1,0 +1,117 @@
+#####################################################################
+# database access
+install.packages("dbplyr", repos='http://cran.us.r-project.org')
+install.packages("RSQLite", repos='http://cran.us.r-project.org')
+library(dplyr)
+library(RSQLite)
+
+# connect (and create) our in memory database
+con <- DBI::dbConnect(RSQLite::SQLite(), path = ":memory:")
+
+# load the iris dataset
+install.packages("datasets", repos='http://cran.us.r-project.org')
+library(datasets)
+data(iris)
+summary(iris)
+
+# populate a table, iris, with the information from the iris dataframe
+copy_to(con, iris, "iris",
+  temporary = FALSE, 
+  indexes = list(
+    "Species"
+  )
+)
+iris_db <- tbl(con, "iris")
+iris_db
+
+nrow(iris_db)
+
+head(iris_db, n = 10)
+
+show_query(head(iris_db, n = 10))
+
+# pull data back into R using collect
+my_iris <- iris_db %>% collect()
+my_iris
+#####################################################################
+# JSON example
+#json
+
+var fords = require('/Users/dtoomey/fords.json');
+
+//display how many Ford models are in our data set
+console.log("There are " + fords.Models.length + " Ford models in the data set");
+
+//loop over the set
+var index = 1
+for(var i=0; i<fords.Models.length; i++) {
+    
+    //get this model
+    var model = fords.Models[i];
+    
+    //pull it's name
+    var name = model.model_name;
+    
+    //if the model name does not have numerics in it
+    if(! name.match(/[0-9]/i)) {
+        //display the model name
+        console.log("Model " + index + " is a " + name);
+        index++;
+    }
+    
+    //only display the first 5
+    if (index>5) break;
+}
+#####################################################################
+# read csv
+heating <- read.csv(file="https://raw.github.com/vincentarelbundock/Rdatasets/master/csv/Ecdat/Heating.csv", header=TRUE, sep=",")
+head(heating)
+
+# change the column names to be more readable
+colnames(heating)[colnames(heating)=="depvar"] <- "system"
+colnames(heating)[colnames(heating)=="ic.gc"] <- "install_cost"
+colnames(heating)[colnames(heating)=="oc.gc"] <- "annual_cost"
+colnames(heating)[colnames(heating)=="pb.gc"] <- "ratio_annual_install"
+
+# remove unused columns
+heating$idcase <- NULL
+heating$ic.gr <- NULL
+heating$ic.ec <- NULL
+heating$ic.hp <- NULL
+heating$ic.er <- NULL
+heating$oc.gr <- NULL
+heating$oc.ec <- NULL
+heating$oc.hp <- NULL
+heating$oc.er <- NULL
+heating$pb.gr <- NULL
+heating$pb.ec <- NULL
+heating$pb.er <- NULL
+heating$pb.hp <- NULL
+
+head(heating)
+#####################################################################
+# read text (Trump speech)
+#saved from https://transcripts.factcheck.org/remarks-president-trump-tax-reform-event/
+path <- "C:/Users/Dan/trump.txt"
+
+text <- readLines(path, encoding="UTF-8")
+
+# create corpus
+#install.packages("tm", repos='http://cran.us.r-project.org')
+library(tm)
+vs <- VectorSource(text)
+elem <- getElem(stepNext(vs))
+result <- readPlain(elem, "en", "idi")
+txt <- Corpus(vs)
+summary(txt)
+
+# convert to lower case
+txtlc <- tm_map(txt, tolower)
+inspect(txt[1])
+inspect(txtlc[1])
+
+dtm <- DocumentTermMatrix(txt)
+inspect(dtm)
+
+findAssocs(dtm, "tax", 0.15)
+#####################################################################

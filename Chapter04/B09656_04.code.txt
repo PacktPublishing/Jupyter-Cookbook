@@ -1,0 +1,307 @@
+#####################################################################
+#python line graph
+import pandas
+import matplotlib
+%matplotlib inline
+
+baby_name = ['Alice','Charles','Diane','Edward']
+number_births = [96, 155, 66, 272]
+dataset = list(zip(baby_name,number_births))
+df = pandas.DataFrame(data = dataset, columns=['Name', 'Number'])
+df['Number'].plot()
+
+#python histogram
+import pylab
+import random
+
+random.seed(113)
+
+samples = 1000
+dice = []
+for i in range(samples):
+ total = random.randint(1,6) + random.randint(1,6)
+ dice.append(total)
+
+pylab.hist(dice, bins= pylab.arange(1.5,12.6,1.0))
+pylab.show()
+
+#####################################################################
+#python density map
+%matplotlib inline
+
+import matplotlib.pyplot as plt
+from mpl_toolkits.basemap import Basemap
+from matplotlib.patches import Polygon
+import pandas as pd
+import numpy as np
+import matplotlib
+
+# create the map
+map = Basemap(llcrnrlon=-119,llcrnrlat=22,urcrnrlon=-64,urcrnrlat=49,
+ projection='lcc',lat_1=33,lat_2=45,lon_0=-95)X# load the shapefile, use the name 'states'
+# download from https://github.com/matplotlib/basemap/tree/master/examples/st99_d00.dbf,shx,shp
+map.readshapefile('st99_d00', name='states', drawbounds=True)
+
+# collect the state names from the shapefile attributes so we can
+# look up the shape obect for a state by it's name
+state_names = []
+for shape_dict in map.states_info:
+ state_names.append(shape_dict['NAME'])
+
+ax = plt.gca() # get current axes instance
+
+# load density data drawn from 
+# https://en.wikipedia.org/wiki/List_of_U.S._states_by_population_density
+df = pd.read_csv('states.csv')
+
+# determine the range of density values
+max_density = -1.0
+min_density = -1.0
+for index, row in df.iterrows():
+ d = row['density/mi2']
+ density = float(d.replace(',' , ''))
+ if (max_density==-1.0) or (max_density<density):
+ max_density = density
+ if (min_density==-1.0) or (min_density>density):
+ min_density = density
+print('max',max_density)
+print('min',min_density)
+range_density = max_density - min_density
+print(range_density)
+
+# we pick a color for the state density out of red spectrum
+cmap = matplotlib.cm.get_cmap('Spectral')
+
+# for each state get the color for it's density
+for index, row in df.iterrows():
+ state_name = row['State']
+ d = row['density/mi2']
+ density = float(d.replace(',' , ''))
+ color = cmap((density - min_density)/range_density)
+ seg = map.states[state_names.index(state_name)]
+ poly = Polygon(seg, facecolor=color, edgecolor=color)
+ ax.add_patch(poly)
+
+plt.show()
+
+#####################################################################
+#python 3-d plot
+%matplotlib inline
+
+# import tools we are using
+import pandas as pd
+import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+
+# read in the car ‘table’ – not a csv, so we need
+# to add in the column names
+column_names = ['mpg', 'cylinders', 'displacement', 'horsepower', 'weight', 'acceleration', 'year', 'origin', 'name']
+df = pd.read_table('http://archive.ics.uci.edu/ml/machine-learning-databases/auto-mpg/auto-mpg.data', sep=r"\s+", index_col=0, header=None, names = column_names)
+print(df.head())
+
+#start out plotting (uses a subplot as that can be 3d)
+fig = plt.figure()
+ax = fig.add_subplot(111, projection='3d')X# pull out the 3 columns that we want
+xs = []
+ys = []
+zs = []
+for index, row in df.iterrows():
+ xs.append(row['weight'])
+ ys.append(index) #read_table uses first column as index
+ zs.append(row['cylinders'])X# based on our data set the extents of the axes
+plt.xlim(min(xs), max(xs))
+plt.ylim(min(ys), max(ys))
+ax.set_zlim(min(zs), max(zs))
+
+# standard scatter diagram (except it is 3d)
+ax.scatter(xs, ys, zs)
+
+ax.set_xlabel('Weight')
+ax.set_ylabel('MPG')
+ax.set_zlabel('Cylinders')
+
+plt.show()
+
+#####################################################################
+#python interactive graphic
+from bokeh.io import output_notebook, show
+from bokeh.layouts import widgetbox
+from bokeh.models.widgets import TextInput
+from bokeh.models import WidgetBox
+import numpy as np
+import pandas as pd
+from bokeh.plotting import figure, show
+from bokeh.layouts import layout
+
+output_notebook()
+
+# load the vote counts
+from_counts = np.load("from_counts.npy")
+
+# convert array to a dataframe (Histogram requires a dataframe)
+df = pd.DataFrame({'Votes':from_counts})
+#print(df.head())
+
+p = figure(plot_height=200,plot_width=600, title="How Many Votes Made by Users")
+p.vbar(x=range(0,6110), width=0.5, bottom=0,
+       top=df.Votes, color="firebrick")
+
+button = Button(label="Foo", button_type="success")
+text = TextInput(title="title", value='A Text Box')
+widgets = WidgetBox(button, text)
+l = layout([p,widgets])
+
+show(l)
+
+#####################################################################
+#r scatterplot
+# load the iris data set
+data <- read.csv("http://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data")
+
+#Let us also clean up the data so as to be more readable
+colnames(data) <- c("sepal_length", "sepal_width", "petal_length", "petal_width", "species")
+
+# make sure the data is as expected
+summary(data)
+
+plot(data$sepal_length, data$petal_length)
+
+plot(data$sepal_length, data$petal_length, type="s")
+
+plot(data$sepal_length, data$petal_length, type="h")
+
+#####################################################################
+#r regression line
+# load the iris data set
+data <- read.csv("http://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data")
+
+#Let us also clean up the data so as to be more readable
+colnames(data) <- c("sepal_length", "sepal_width", "petal_length", "petal_width", "species")
+
+# call plot first
+plot(data$sepal_length, data$petal_length)
+
+# abline adds to the plot
+abline(lm(data$petal_length ~ sepal_length), col="red")
+
+#####################################################################
+# r lowess line
+# load the iris data set
+data <- read.csv("http://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data")
+
+#Let us also clean up the data so as to be more readable
+colnames(data) <- c("sepal_length", "sepal_width", "petal_length", "petal_width", "species")
+
+# call plot first
+plot(data$sepal_length, data$petal_length)
+
+# add the lowess line to the graph
+lines(lowess(data$sepal_length, data$petal_length), col="blue")
+
+#####################################################################
+#r scatter matrix
+# load the iris data set
+data <- read.csv("http://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.data")
+
+#Let us also clean up the data so as to be more readable
+colnames(data) <- c("sepal_length", "sepal_width", "petal_length", "petal_width", "species")
+
+pairs(data)
+
+#####################################################################
+# r barchart
+# we are using the haireyecolor data from the MASS library
+library(MASS)
+summary(HairEyeColor)
+
+# display the data
+HairEyeColor
+
+# build a table of the information
+counts <- table(HairEyeColor)
+# produce the bar chart
+barplot(counts)
+
+#####################################################################
+# r word cloud
+library(tm)
+#install.packages('wordcloud', repos='http://cran.us.r-project.org')
+library(wordcloud)
+
+#extracted from https://www.lifesitenews.com/news/jesus-birth-changed-the-course-of-human-history-trumps-extraordinary-2017-c
+page <- readLines("trump-speech.txt")
+
+# produce corpus of text
+corpus <- Corpus(VectorSource(page))
+
+# convert to lower case
+corpus <- tm_map(corpus, tolower)
+# remove punctuation
+corpus <- tm_map(corpus, removePunctuation)
+# remove numbers
+corpus <- tm_map(corpus, removeNumbers)
+# remove stop words
+corpus <- tm_map(corpus, removeWords, stopwords("English"))
+
+# reconfigure corpus as text document
+#corpus <- tm_map(corpus, PlainTextDocument)
+# create document term matrix from corpus
+dtm <- TermDocumentMatrix(corpus)
+# convert to a standard R matrix
+m = as.matrix(dtm)
+# sort highest usage
+v = sort(rowSums(m), decreasing=TRUE)
+
+wordcloud(names(v), v, min.freq=20)
+
+#####################################################################
+#julia setup
+Pkg.add("DataFrames")
+Pkg.add("RDatasets")
+Pkg.add("Gadfly")
+Pkg.update()
+
+#####################################################################
+#julia random plot
+#Pkg.add("Plots")
+#Pkg.add("PyPlot")
+using Plots
+plotly()
+srand(113)
+plot(rand(5,5),title="My Random Plot")
+
+#####################################################################
+#Julia Gadfly Scatter
+using RDatasets, Dataframes, Gadfly
+set_default_plot_size(5inch, 5ich/golden)
+describe(dataset("datasets", "iris"))
+plot(dataset("datasets", "iris"), x="SepalWidth", y="SepalLength", color="Species")
+
+#####################################################################
+#Julia Gadfly Histogram
+using Gadfly
+srand(111)
+plot(x=randn(77), Geom.histogram(bincount=10))
+
+#####################################################################
+#julia winston line graph
+using Winston
+srand(111)
+
+#generate a plot
+pl = plot(cumsum(rand(111) .- 0.5), "g", cumsum(rand(111) .- 0.5), "b")
+
+display(pl)
+
+
+
+
+
+
+
+
+
+
+
+

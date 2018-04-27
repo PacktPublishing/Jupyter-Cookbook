@@ -1,0 +1,312 @@
+Example Python Dashboard
+%matplotlib inline
+
+from __future__ import division
+import math
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+pd.set_option('display.max_columns', 150)
+pd.set_option('display.max_rows', 25)
+pd.set_option('display.width', 100)
+pd.set_option('display.max_colwidth', 1024)
+
+#wget http://www.mathstat.strath.ac.uk/outreach/nessie/datasets/whiskies.txt
+df = pd.read_csv('whiskies.txt')
+df.head(1)
+
+import sklearn.datasets
+import sklearn.metrics as metrics
+from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans, DBSCAN, MeanShift
+from sklearn.preprocessing import StandardScaler
+X = df.drop(['RowID', 'Distillery', 'Postcode', ' Latitude', ' Longitude'], axis=1)
+X.describe()
+
+# X_std = StandardScaler().fit_transform(X)
+# pd.DataFrame(X_std, columns=X.columns).describe()
+n_components = 5
+pca = PCA(n_components=n_components)
+X_pca = pca.fit_transform(X)
+X.shape, X_pca.shape
+weights = np.round(pca.components_, 3)
+ev = np.round(pca.explained_variance_ratio_, 3)
+ev
+
+pca_df = pd.DataFrame(weights, columns=X.columns)
+pca_df
+
+import warnings
+warnings.simplefilter(action = "ignore")
+component_names = []
+pca_df_t = pca_df.T
+for col in pca_df_t:
+    component = pca_df_t[col]
+    order = component.abs()#.order(ascending=False)
+    top = order.head(3)
+    component_name = [name if component[name] > 0 else ('neg-' + name) for name in top.index]
+    component_names.append('/'.join(component_name))
+
+pca_df.index = component_names
+pca_df
+
+inertia = [np.NaN]
+for i in range(1,20):
+    kmeans = KMeans(n_clusters=i)
+    kmeans.fit(X)
+    inertia.append(kmeans.inertia_)
+    
+ax = plt.subplot(111)
+ax.plot(inertia, 'o-')
+ax.set_ylabel('inertia')
+ax.set_xlabel('# clusters')
+
+n_clusters = 4
+kmeans = KMeans(n_clusters=n_clusters)
+kmeans.fit(X)
+
+X['cluster'] = kmeans.labels_
+
+X.cluster.value_counts()
+
+X_pca_clustered = np.insert(X_pca, n_components, values=kmeans.labels_, axis=1)
+
+pca_cluster_df = pd.DataFrame(X_pca_clustered, columns=component_names + ['cluster'])
+
+g = sns.PairGrid(pca_cluster_df, hue='cluster', vars=component_names, size=3)
+g.map_diag(plt.hist)
+g.map_offdiag(plt.scatter)
+g.add_legend()
+
+dist = sklearn.metrics.pairwise.euclidean_distances(X)
+
+sim = sklearn.metrics.pairwise.cosine_similarity(X)
+
+dist_df = pd.DataFrame(dist, columns=df.Distillery, index=df.Distillery)
+
+sim_df = pd.DataFrame(sim, columns=df.Distillery, index=df.Distillery)
+
+cluster_s = X.cluster
+cluster_s.index = df.Distillery
+
+sim_df['Ardbeg']#.order(ascending=False)
+
+features_df = df.ix[:,1:13].set_index('Distillery')
+
+#Add the cluster info to the features DataFrame so we only have to persist one file for both.
+
+features_df['cluster'] = cluster_s
+
+features_df.to_pickle('features.dataframe')
+
+sim_df.to_pickle('sims.dataframe')
+
+################################################################################################
+# R dashboard
+##########################################
+# Load and display same of the data points
+#install.packages("s20x", repos='http://cran.us.r-project.org')
+#install.packages("car", repos='http://cran.us.r-project.org')
+
+# libraries used
+library(s20x)
+library(car)
+
+# load and display data - originally at http://www.dataapple.net/wp-content/uploads/2013/04/
+df <- read.csv("grapeJuice.csv",header=T)
+head(df)
+
+############################
+# Calculate ad effectiveness
+#
+#divide the dataset into two sub dataset by ad_type
+sales_ad_nature = subset(df,ad_type==0)
+sales_ad_family = subset(df,ad_type==1)
+
+# graph the two
+par(mfrow = c(1,2))
+
+hist(sales_ad_nature$sales,main="",xlab="sales with nature production theme ad",prob=T)
+lines(density(sales_ad_nature$sales),lty="dashed",lwd=2.5,col="red")
+
+hist(sales_ad_family$sales,main="",xlab="sales with family health caring theme ad",prob=T)
+lines(density(sales_ad_family$sales),lty="dashed",lwd=2.5,col="red")
+
+#######################
+# Display Sales drivers
+pairs20x(df)
+
+############################
+# Regeression model on sales
+#regression model
+sales.reg<-lm(sales~price+ad_type+price_apple+price_cookies,df)
+summary(sales.reg)
+
+###################################################
+###################################################
+#python dashboard
+
+import pandas as pd
+import numpy as np
+
+import statsmodels.formula.api as sm
+
+import matplotlib.pylab as plt
+%matplotlib inline
+from matplotlib.pylab import rcParams
+rcParams['figure.figsize'] = 15, 6
+
+data = pd.read_csv("Documents/grapeJuice.csv")
+data.head()
+
+data["sales"] = data["sales"] / 20
+plt.plot(data); #suppresses extraneous matplotlib messages
+
+Y = data['sales'][:-1]
+X = data[['price','ad_type','price_apple','price_cookies']][:-1]
+result = sm.OLS( Y, X ).fit()
+result.summary()
+
+###################################################
+###################################################
+# julia dashboard
+#Pkg.add("DataFrames")
+#Pkg.add("PyPlot")
+#Pkg.add("GLM")
+using DataFrames;
+using GLM;
+using PyPlot;
+juice = readtable("grapeJuice.csv")
+size(juice)
+names(juice)
+head(juice)
+# linear regression
+lm = fit(LinearModel, @formula(sales ~ price + ad_type + price_apple + price_cookies), juice)
+#function provided from https://gist.github.com/ahwillia/43c2cfb894f2bfec6760
+
+function pairs(data)
+  (nobs, nvars) = size(data)
+  (fig, ax) = subplots(nvars, nvars, figsize=(8,8))
+  subplots_adjust(hspace=0.05, wspace=0.05)
+
+  # Plot data
+  for i = 1:nvars
+      for j = 1:nvars
+          if i != j
+              ax[i,j][:plot](data[:,j],data[:,i],"ob",mfc="none")
+          else
+              ax[i,j][:hist](data[:,i])
+          end
+          ax[i,j][:xaxis][:set_visible](false)
+          ax[i,j][:yaxis][:set_visible](false)
+      end
+  end
+
+  # Set tick positions
+  for i = 1:nvars
+      ax[i,1][:yaxis][:set_ticks_position]("left")
+      ax[i,end][:yaxis][:set_ticks_position]("right")
+      ax[1,i][:xaxis][:set_ticks_position]("top")
+      ax[end,i][:xaxis][:set_ticks_position]("bottom")
+  end
+
+  # Turn ticks on
+  cc = repmat([nvars, 1],Integer(ceil(nvars/2)),1)
+  for i = 1:nvars
+      ax[i,cc[i]][:yaxis][:set_visible](true)
+      ax[cc[i],i][:xaxis][:set_visible](true)
+  end
+end
+
+pairs(juice)
+
+################################################################################################
+# JavaScript (node) dashboard
+##########################################
+
+var fs = require("fs");
+
+var d3 = require("d3");
+
+var _ = require("lodash");
+
+
+
+fs.readFile("/Users/ToomeyD/Documents//animals.tsv", "utf8", function(error, data) {
+  
+	data = d3.tsvParse(data);
+  
+	console.log(JSON.stringify(data, null, 4));
+
+  
+
+	var maxWeight = d3.max(data, function(d) { 
+		return parseInt(d.avg_weight); 
+	});
+  
+	console.log(maxWeight);
+});
+
+
+
+//stats
+
+const stats = require("stats-analysis");
+
+
+var arr = [98, 98.6, 98.4, 98.8, 200, 120, 98.5];
+
+
+
+//standard deviation 
+
+var my_stddev = stats.stdev(arr).toFixed(2);
+ 
+
+
+//mean 
+
+var my_mean = stats.mean(arr).toFixed(2);
+ 
+
+
+//median 
+
+var my_median = stats.median(arr);
+ 
+
+
+//median absolute deviation 
+
+var my_mad = stats.MAD(arr);
+ 
+
+
+// Get the index locations of the outliers in the data set 
+
+var my_outliers = stats.indexOfOutliers(arr);
+ 
+
+
+// Remove the outliers 
+
+var my_without_outliers = stats.filterOutliers(arr);
+
+
+
+//display our stats
+
+console.log("Raw data is ", arr);
+
+console.log("Standard Deviation is ", my_stddev);
+
+console.log("Mean is ", my_mean);
+
+console.log("Median is ", my_median);
+
+console.log("Median Abs Deviation is " + my_mad);
+
+console.log("The outliers of the data set are ", my_outliers);
+
+console.log("The data set without outliers is ", my_without_outliers);
